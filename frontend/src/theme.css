@@ -1,0 +1,59 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap");
+@import "tailwindcss";
+
+:root {
+  font-family: "DM Sans", sans-serif;
+  color: #28342e;
+  background: #f4f5f1;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color-scheme: light;
+  --ink: #28342e;
+  --muted: #818981;
+  --line: #e7e9e4;
+  --paper: #fff;
+  --canvas: #f4f5f1;
+  --green: #3b7657;
+  --green-dark: #28523d;
+  --green-soft: #eaf2eb;
+  --serif: "Fraunces", Georgia, serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  min-width: 360px;
+  min-height: 100vh;
+  margin: 0;
+}
+button,
+input,
+textarea {
+  font: inherit;
+}
+button,
+a,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+button {
+  color: inherit;
+}
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+summary:focus-visible {
+  outline: 3px solid #85b795;
+  outline-offset: 2px;
+}
+::selection {
+  color: #183727;
+  background: #d8eadc;
+}
+#root {
+  min-height: 100vh;
+}

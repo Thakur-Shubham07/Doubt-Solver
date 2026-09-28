@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     cors_origins: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     database_url: str = f"sqlite:///{(BACKEND_DIR / 'db' / 'app.db').as_posix()}"
     gemini_api_key: SecretStr | None = None
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.8-flash"
+    gemini_fallback_model: str | None = "gemini-flash-lite-latest"
     gemini_embedding_model: str = "gemini-embedding-001"
     qdrant_url: str = "http://localhost:6333"
     qdrant_api_key: SecretStr | None = None

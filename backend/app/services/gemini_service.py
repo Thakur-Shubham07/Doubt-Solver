@@ -83,27 +83,51 @@ class GeminiService:
             )
         )
 
-        try:
-            response = self._get_client().models.generate_content(
-                model=settings.gemini_model,
-                contents=conversation,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0,
-                    response_mime_type="application/json",
-                    response_schema=GroundedAnswer,
-                ),
+        model_candidates = list(
+            dict.fromkeys(
+                model
+                for model in (settings.gemini_model, settings.gemini_fallback_model)
+                if model
             )
-            if not response.text:
-                raise ServiceUnavailableError(
-                    "Gemini returned an empty response"
+        )
+        response = None
+        client = self._get_client()
+        for index, model in enumerate(model_candidates):
+            try:
+                response = client.models.generate_content(
+                    model=model,
+                    contents=conversation,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0,
+                        response_mime_type="application/json",
+                        response_schema=types.Schema(
+                            type=types.Type.OBJECT,
+                            properties={
+                                "supported": types.Schema(type=types.Type.BOOLEAN),
+                                "answer": types.Schema(type=types.Type.STRING),
+                            },
+                            required=["supported", "answer"],
+                        ),
+                    ),
                 )
+                break
+            except Exception as exc:
+                is_transient = getattr(exc, "code", None) in {429, 503}
+                has_fallback = index + 1 < len(model_candidates)
+                if is_transient and has_fallback:
+                    continue
+                raise ServiceUnavailableError(
+                    "Gemini answer service is unavailable"
+                ) from exc
+
+        if response is None or not response.text:
+            raise ServiceUnavailableError("Gemini returned an empty response")
+        try:
             result = GroundedAnswer.model_validate_json(response.text)
-        except ServiceUnavailableError:
-            raise
         except Exception as exc:
             raise ServiceUnavailableError(
-                "Gemini answer service is unavailable"
+                "Gemini returned an invalid answer"
             ) from exc
 
         if not result.supported:
