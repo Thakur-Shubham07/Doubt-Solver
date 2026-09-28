@@ -11,14 +11,16 @@ from app.services.lesson_ingestion import (
 )
 
 
-LESSON_DATA_PATH = Path(__file__).resolve().parent / "data" / "digestive_system.json"
+LESSON_DATA_DIR = Path(__file__).resolve().parent / "data"
+LESSON_DATA_PATH = LESSON_DATA_DIR / "digestive_system.json"
 
 
-def ingest_example_lesson(
+def ingest_lesson_file(
     session: Session,
+    lesson_path: Path,
     service: LessonIngestionService | None = None,
 ) -> Lesson:
-    lesson_data = json.loads(LESSON_DATA_PATH.read_text(encoding="utf-8"))
+    lesson_data = json.loads(lesson_path.read_text(encoding="utf-8"))
     ingestion_service = service or get_lesson_ingestion_service()
     return ingestion_service.ingest_lesson(
         session=session,
@@ -31,11 +33,37 @@ def ingest_example_lesson(
     )
 
 
+def ingest_example_lesson(
+    session: Session,
+    service: LessonIngestionService | None = None,
+) -> Lesson:
+    return ingest_lesson_file(
+        session=session,
+        lesson_path=LESSON_DATA_PATH,
+        service=service,
+    )
+
+
+def ingest_lessons_from_directory(
+    session: Session,
+    directory: Path = LESSON_DATA_DIR,
+    service: LessonIngestionService | None = None,
+) -> list[Lesson]:
+    lesson_paths = sorted(directory.glob("*.json"))
+    if not lesson_paths:
+        raise FileNotFoundError(f"No lesson JSON files found in {directory}")
+    return [
+        ingest_lesson_file(session, lesson_path, service)
+        for lesson_path in lesson_paths
+    ]
+
+
 def main() -> None:
     init_db()
     with SessionLocal() as session:
-        lesson = ingest_example_lesson(session)
-    print(f"Ingested lesson {lesson.id}: {lesson.title}")
+        lessons = ingest_lessons_from_directory(session)
+    for lesson in lessons:
+        print(f"Ingested lesson {lesson.id}: {lesson.title}")
 
 
 if __name__ == "__main__":

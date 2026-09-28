@@ -25,6 +25,7 @@ import { Button } from "@/components/ui/button";
 import {
   askDoubt,
   fetchHistory,
+  fetchLessonContent,
   fetchLessons,
   type DoubtHistory,
   type DoubtResult,
@@ -45,12 +46,20 @@ export default function Studyroom() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [history, setHistory] = useState<DoubtHistory[]>([]);
+  const [lessonContent, setLessonContent] = useState<DoubtResult["sources"]>(
+    [],
+  );
+  const [materialTab, setMaterialTab] = useState<
+    "study_material" | "transcript"
+  >("study_material");
   const [question, setQuestion] = useState("");
   const [search, setSearch] = useState("");
   const [loadingLessons, setLoadingLessons] = useState(true);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingContent, setLoadingContent] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [contentError, setContentError] = useState<string | null>(null);
   const [apiConnected, setApiConnected] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
@@ -108,6 +117,29 @@ export default function Studyroom() {
       })
       .finally(() => {
         if (active) setLoadingHistory(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedLesson]);
+
+  useEffect(() => {
+    if (!selectedLesson) return;
+
+    let active = true;
+    fetchLessonContent(selectedLesson.id)
+      .then((items) => {
+        if (active) setLessonContent(items);
+      })
+      .catch((reason: unknown) => {
+        if (active) {
+          setLessonContent([]);
+          setContentError(getErrorMessage(reason));
+        }
+      })
+      .finally(() => {
+        if (active) setLoadingContent(false);
       });
 
     return () => {
@@ -259,7 +291,9 @@ export default function Studyroom() {
                   type="button"
                   onClick={() => {
                     setLoadingHistory(true);
+                    setLoadingContent(true);
                     setError(null);
+                    setContentError(null);
                     setSelectedLesson(lesson);
                     setMobileChatOpen(false);
                   }}
@@ -383,6 +417,111 @@ export default function Studyroom() {
                     )}
                   </div>
                 </div>
+
+                <section
+                  className="materials-section"
+                  aria-labelledby="materials-title"
+                >
+                  <div className="materials-heading">
+                    <div>
+                      <span className="eyebrow">READ THE SOURCE</span>
+                      <h2 id="materials-title">Lesson material</h2>
+                    </div>
+                    <span className="materials-count">
+                      {lessonContent.length}{" "}
+                      {lessonContent.length === 1 ? "section" : "sections"}
+                    </span>
+                  </div>
+                  <div
+                    className="material-tabs"
+                    role="tablist"
+                    aria-label="Lesson content type"
+                  >
+                    <button
+                      id="study-material-tab"
+                      type="button"
+                      role="tab"
+                      aria-selected={materialTab === "study_material"}
+                      aria-controls="lesson-material-panel"
+                      className={
+                        materialTab === "study_material" ? "active" : ""
+                      }
+                      onClick={() => setMaterialTab("study_material")}
+                    >
+                      <FileText size={15} /> Study material
+                    </button>
+                    <button
+                      id="transcript-tab"
+                      type="button"
+                      role="tab"
+                      aria-selected={materialTab === "transcript"}
+                      aria-controls="lesson-material-panel"
+                      className={materialTab === "transcript" ? "active" : ""}
+                      onClick={() => setMaterialTab("transcript")}
+                    >
+                      <Video size={15} /> Transcript
+                    </button>
+                  </div>
+                  <div
+                    className="material-panel"
+                    id="lesson-material-panel"
+                    role="tabpanel"
+                    aria-labelledby={
+                      materialTab === "study_material"
+                        ? "study-material-tab"
+                        : "transcript-tab"
+                    }
+                  >
+                    {loadingContent ? (
+                      <div className="material-state">
+                        <LoaderCircle className="spin" size={16} /> Loading
+                        lesson content
+                      </div>
+                    ) : contentError ? (
+                      <div
+                        className="material-state material-error"
+                        role="alert"
+                      >
+                        {contentError}
+                      </div>
+                    ) : lessonContent.filter(
+                        (item) => item.source_type === materialTab,
+                      ).length ? (
+                      lessonContent
+                        .filter((item) => item.source_type === materialTab)
+                        .map((item, index) => (
+                          <article
+                            className="material-chunk"
+                            key={`${item.source_type}-${index}`}
+                          >
+                            <div className="material-chunk-meta">
+                              <span>
+                                {materialTab === "study_material"
+                                  ? "STUDY MATERIAL"
+                                  : "VIDEO TRANSCRIPT"}
+                              </span>
+                              <span>
+                                {formatSourceLocation(
+                                  item.page,
+                                  item.start_sec,
+                                  item.end_sec,
+                                )}
+                              </span>
+                            </div>
+                            <p>{item.content}</p>
+                          </article>
+                        ))
+                    ) : (
+                      <div className="material-state">
+                        No{" "}
+                        {materialTab === "study_material"
+                          ? "study material"
+                          : "transcript"}{" "}
+                        is available for this lesson.
+                      </div>
+                    )}
+                  </div>
+                </section>
 
                 <section className="notes-section">
                   <div className="notes-heading">
@@ -797,6 +936,23 @@ function formatDate(value: string) {
     month: "short",
     day: "numeric",
   }).format(new Date(value));
+}
+
+function formatSourceLocation(
+  page: number | null,
+  start: number | null,
+  end: number | null,
+) {
+  if (page !== null) return `Page ${page}`;
+  if (start !== null && end !== null)
+    return `${formatTime(start)}–${formatTime(end)}`;
+  return "Lesson source";
+}
+
+function formatTime(seconds: number) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  return `${minutes.toString().padStart(2, "0")}:${remainingSeconds.toString().padStart(2, "0")}`;
 }
 
 function getErrorMessage(reason: unknown) {

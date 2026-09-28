@@ -42,7 +42,7 @@ With Qdrant running and `GEMINI_API_KEY` set, run from the `backend` directory:
 python -m app.ingest_lesson
 ```
 
-This loads `app/data/digestive_system.json`, stores lesson metadata in SQLite, and adds transcript and study-material chunks to Qdrant. The script uses real Gemini embeddings, so it requires a working API key and network access.
+This processes every lesson JSON file in `app/data/`, stores lesson metadata in SQLite, and adds transcript and study-material chunks to Qdrant. The script uses real Gemini embeddings, so it requires a working API key and network access.
 
 ## Run the API
 
@@ -57,6 +57,7 @@ The API listens at `http://127.0.0.1:8000`. Interactive API documentation is at 
 - `GET /health` returns application process health.
 - `GET /api/lessons` lists lessons.
 - `GET /api/lessons/{lesson_id}` returns one lesson.
+- `GET /api/lessons/{lesson_id}/content` returns that lesson's transcript and study-material chunks.
 - `POST /api/doubts` retrieves context, generates a grounded answer, and stores the doubt.
 - `GET /api/history/{lesson_id}` returns the lesson's doubt history in chronological order.
 

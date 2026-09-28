@@ -73,6 +73,12 @@ export function fetchLessons() {
   return request<Lesson[]>("/api/lessons");
 }
 
+export function fetchLessonContent(lessonId: string) {
+  return request<SourceReference[]>(
+    `/api/lessons/${encodeURIComponent(lessonId)}/content`,
+  );
+}
+
 export function fetchHistory(lessonId: string) {
   return request<DoubtHistory[]>(
     `/api/history/${encodeURIComponent(lessonId)}`,

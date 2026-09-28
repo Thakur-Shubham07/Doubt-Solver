@@ -124,6 +124,45 @@ class QdrantService:
             results.append(source.model_dump(mode="json"))
         return results
 
+    def get_lesson_chunks(self, lesson_id: str) -> list[dict[str, Any]]:
+        if not lesson_id.strip():
+            raise ValueError("lesson_id must not be empty")
+
+        lesson_filter = models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="lesson_id",
+                    match=models.MatchValue(value=lesson_id),
+                )
+            ]
+        )
+        results: list[dict[str, Any]] = []
+        offset = None
+        try:
+            while True:
+                points, next_offset = self._get_client().scroll(
+                    collection_name=settings.qdrant_collection,
+                    scroll_filter=lesson_filter,
+                    limit=100,
+                    offset=offset,
+                    with_payload=True,
+                    with_vectors=False,
+                )
+                for point in points:
+                    if point.payload is None:
+                        continue
+                    source = SourceReference.model_validate(point.payload)
+                    if source.lesson_id == lesson_id:
+                        results.append(source.model_dump(mode="json"))
+                if next_offset is None:
+                    break
+                offset = next_offset
+        except Exception as exc:
+            raise ServiceUnavailableError(
+                "Qdrant lesson content is unavailable"
+            ) from exc
+        return results
+
 
 qdrant_service = QdrantService()
 

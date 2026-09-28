@@ -85,7 +85,7 @@ cd backend
 python -m app.ingest_lesson
 ```
 
-This creates the `learning_content` collection if needed, embeds the transcript and study material in `backend/app/data/digestive_system.json`, and saves the lesson record and vectors. Ingestion requires Gemini API access and uses your account's quota.
+This creates the `learning_content` collection if needed, embeds every lesson JSON file in `backend/app/data/`, and saves lesson records and their transcript/study-material vectors. Ingestion requires Gemini API access and uses your account's quota.
 
 ## Run the Application
 
@@ -130,7 +130,7 @@ Example API request:
 }
 ```
 
-Include the `conversation_id` from the previous response to continue a conversation. The API also provides `GET /api/lessons`, `GET /api/lessons/{lesson_id}`, `POST /api/doubts`, and `GET /api/history/{lesson_id}`.
+Include the `conversation_id` from the previous response to continue a conversation. The API also provides `GET /api/lessons`, `GET /api/lessons/{lesson_id}`, `GET /api/lessons/{lesson_id}/content`, `POST /api/doubts`, and `GET /api/history/{lesson_id}`.
 
 ## Checks
 
