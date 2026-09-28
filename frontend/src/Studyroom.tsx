@@ -84,7 +84,6 @@ export default function Studyroom() {
     if (!selectedLesson) return;
 
     let active = true;
-    setError(null);
     fetchHistory(selectedLesson.id)
       .then((items) => {
         if (!active) return;
@@ -125,6 +124,9 @@ export default function Studyroom() {
       .toLowerCase()
       .includes(search.toLowerCase()),
   );
+  const videoEmbedUrl = selectedLesson
+    ? getYouTubeEmbedUrl(selectedLesson.video_url)
+    : null;
 
   async function submitQuestion(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -356,41 +358,30 @@ export default function Studyroom() {
                       <span className="eyebrow">WATCH & LEARN</span>
                       <h2>Lesson video</h2>
                     </div>
-                    <a
-                      className="resource-link"
-                      href={selectedLesson.video_url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Open on YouTube <ExternalLink size={13} />
-                    </a>
+                    <span className="player-label">
+                      <span /> PLAYING HERE
+                    </span>
                   </div>
-                  <a
-                    className="video-preview"
-                    href={selectedLesson.video_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    aria-label="Open lesson video on YouTube"
-                  >
-                    <div className="video-grid" />
-                    <div className="video-stamp">
-                      <Video size={17} />
-                      <span>
-                        LESSON
-                        <br />
-                        RESOURCE
-                      </span>
-                    </div>
-                    <div className="video-center">
-                      <span>
-                        <Play size={22} fill="currentColor" />
-                      </span>
-                    </div>
-                    <div className="video-caption">
-                      <span>CONTINUE YOUR LESSON</span>
-                      <ArrowRight size={15} />
-                    </div>
-                  </a>
+                  <div className="video-frame">
+                    {videoEmbedUrl ? (
+                      <iframe
+                        src={videoEmbedUrl}
+                        title={`${selectedLesson.title} lesson video`}
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    ) : (
+                      <div className="video-unavailable" role="status">
+                        <Video size={22} />
+                        <strong>Video unavailable</strong>
+                        <span>
+                          Add a valid YouTube video URL to this lesson to play
+                          it here.
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <section className="notes-section">
@@ -767,6 +758,31 @@ function SourceIcon({ type }: { type: string }) {
   ) : (
     <FileText size={13} />
   );
+}
+
+function getYouTubeEmbedUrl(videoUrl: string) {
+  try {
+    const url = new URL(videoUrl);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const videoId =
+      host === "youtu.be"
+        ? url.pathname.slice(1).split("/")[0]
+        : [
+              "youtube.com",
+              "m.youtube.com",
+              "music.youtube.com",
+              "youtube-nocookie.com",
+            ].includes(host)
+          ? (url.searchParams.get("v") ??
+            url.pathname.match(/^\/(?:embed|shorts|live)\/([^/?]+)/)?.[1])
+          : null;
+
+    return videoId && /^[A-Za-z0-9_-]{11}$/.test(videoId)
+      ? `https://www.youtube-nocookie.com/embed/${videoId}?rel=0`
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 function historyItemToMessages(item: DoubtHistory): Message[] {
